@@ -1,0 +1,4 @@
+requests
+vk_api
+vkbottle
+yoomoney
