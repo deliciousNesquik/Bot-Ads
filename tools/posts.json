@@ -1,0 +1,29 @@
+{
+    "300": {
+        "owner_id": -210049982,
+        "from_group": 0,
+        "message": "1",
+        "attachments": "photo469440405_457247805",
+        "publish_date": "2023-04-02 23:00:00",
+        "close_comments": 1,
+        "copyright": null
+    },
+    "303": {
+        "owner_id": -210049982,
+        "from_group": 0,
+        "message": "\u041f\u043e\u0441\u0432\u044f\u0449\u0451\u043d\u043e:",
+        "attachments": "photo469440405_457247807",
+        "publish_date": "2023-04-02 22:00:00",
+        "close_comments": 1,
+        "copyright": null
+    },
+    "304": {
+        "owner_id": -210049982,
+        "from_group": 0,
+        "message": null,
+        "attachments": "photo469440405_457247808",
+        "publish_date": "2023-04-03 10:00:00",
+        "close_comments": 0,
+        "copyright": null
+    }
+}
