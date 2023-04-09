@@ -5,6 +5,7 @@ from vkbottle import BaseStateGroup
 from vkbottle import Keyboard, KeyboardButtonColor, Text, EMPTY_KEYBOARD
 from tools.customers import Customer
 from tools.payments import Payment
+from tools.sql import DataBase
 
 import asyncio
 import urllib.request
@@ -14,14 +15,16 @@ import tools.config
 import tools.wall
 import tools.post_date
 import tools.log_tools
+import tools.json_tools
 import time
 import os
 
 #loguru.logger.disable("vkbottle")
-bot = Bot(token=tools.config.token_message)
+db        = DataBase(tools.config.path_db)
+bot       = Bot(token=tools.config.token_message)
+ctx       = CtxStorage()
+payment   = Payment(token=tools.config.token_payments)
 customers = Customer()
-payment = Payment(token=tools.config.token_payments)
-ctx = CtxStorage()
 
 class PostCreator(BaseStateGroup):
     CONTENT        = 1
@@ -29,7 +32,6 @@ class PostCreator(BaseStateGroup):
     REFERENCE      = 3
     CLOSE_COMMENTS = 4
     CONFIRM        = 5
-
 
 
 @bot.on.private_message(text="Начать")
@@ -61,8 +63,7 @@ async def pay(message: Message):
 		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Оплатил пост>", time=datetime.datetime.now(), limit=10)
 		keyboard = Keyboard(inline=True)
 		keyboard.add(Text("Создать рекламный пост"))
-		
-		await message.answer(f"Пользователь {message.from_id}, статус оплаты {customers.get(message.from_id)[0]}, метка оплаты {customers.get(message.from_id)[1]}")
+
 		await message.answer("Ваш пост оплачен, давайте приступим к его созданию", keyboard=keyboard)
 
 	else:
@@ -112,7 +113,7 @@ async def create_post(message: Message):
 		await message.answer("""
 Создание рекламного поста делится на некоторые этапы, в некоторых из них вы можете выбрать отсутствие элемента, для этого просто нажмите кнопку (Отсутствует)
 
-1)Контент поста (фотографий 3 шт. макс.)
+1)Контент поста (фотографий 3 шт. макс.| видео не поддерживает)
 3)Дата публикации поста
 4)Ссылка на источник
 5)Закрытые коментарии поста""")
@@ -143,6 +144,8 @@ async def create_post(message: Message):
 		ctx.set("content", None)
 
 	if message.attachments:
+		with open("test.txt", "w", encoding="utf-8") as file:
+			file.write(str(message.attachments))
 		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Прикрепил фото или видео>", time=datetime.datetime.now(), limit=10)
 		attach = []
 		if message.attachments[0].photo:
@@ -154,10 +157,10 @@ async def create_post(message: Message):
 			ctx.set("content", attach)
 			customers.add(message.from_id, attach)
 			
-			# elif message.attachments[0].video:
-			# 	for i in range(len(message.attachments)):
-			# 		attach.append(f"video{i}.mp4")
-			# 		urllib.request.urlretrieve(message.attachments[i].video.url, f"video{i}.mp4")
+		# elif message.attachments[0].video:
+		# 	for i in range(len(message.attachments)):
+		# 		attach.append(f"video{i}.mp4")
+		# 		urllib.request.urlretrieve(message.attachments[i].video.url, f"video{i}.mp4")
 	else:
 		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Не прикрепил фото или видео>", time=datetime.datetime.now(), limit=10)
 		ctx.set("content", None)
@@ -281,21 +284,31 @@ async def create_post(message: Message):
 
 	if message.text == "Да":
 		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Закончил создание поста>", time=datetime.datetime.now(), limit=10)
-		tools.wall.post(
+		await message.answer("Создание поста, пожалуйста подождите...")
+
+		if tools.wall.post(
 			message        = customers.get(message.from_id)[2],
 			attachments    = customers.get(message.from_id)[3],
 			publish_date   = datetime.datetime.strptime(customers.get(message.from_id)[4], "%Y-%m-%d %H:%M:%S"),
 			close_comments = customers.get(message.from_id)[6],
 			copyright      = customers.get(message.from_id)[5],
-			)
+			customer	   = message.from_id,
+			):
+			await message.answer("Успешное создание поста, он будет опубликован вовремя!")
+			
+			if customers.get(message.from_id)[3] != None:
+				for item in customers.get(message.from_id)[3]:
+					os.remove(item)
+			
+			count = db.read_one_query(f"SELECT count_posts FROM customers WHERE user_id={int(message.from_id)};")
+			count = int(''.join(map(str, count)))
+			if count is None: count = 0
+			db.write_query(f"INSERT OR REPLACE INTO customers (user_id, latest_post, count_posts) VALUES ({message.from_id}, \"{str(customers.get(message.from_id)[4])}\", {count+1})")
+			
+			customers.set(user_id=message.from_id, param=["WAIT"])
+		else:
+			await message.answer("При создании поста возникла ошибка на стороне сервера! Не волнуйтесь ваш оплаченый пост не исчез! Обратитесь в поддержку или повторите попытку позже")
 
-		await message.answer("Ваш пост занесен в список и вовремя будет опубликован!")
-
-		if customers.get(message.from_id)[3] != None:
-			for item in customers.get(message.from_id)[3]:
-				os.remove(item)
-
-		customers.set(user_id=message.from_id, param=["WAIT"])
 	
 	elif message.text == "Нет":
 		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Отменил создание поста>", time=datetime.datetime.now(), limit=10)
