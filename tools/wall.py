@@ -27,7 +27,7 @@ import datetime
 # unix_time:		Datetime - переменная для хранения времени в unix формате
 
 
-def post(publish_date:datetime, message:str = None, attachments:list = None, close_comments:int = 0, copyright:str = None, from_group:int = 0) -> bool:
+def post(publish_date:datetime, message:str = None, attachments:list = None, close_comments:int = 0, copyright:str = None, from_group:int = 0, customer:int = None) -> bool:
 	log_tools.logging(log_file=config.path_log, string = f"[wall.post][info]Создание поста в вк...", time=datetime.datetime.now(), limit=10)
 
 	global session, uploader
@@ -69,6 +69,7 @@ def post(publish_date:datetime, message:str = None, attachments:list = None, clo
 		dictionary = {
 				str(id_post['post_id']): {
 					'owner_id'       : -config.owner_id,
+					'customer'		 : customer,
 					'from_group'     : from_group,
 					'message'        : message,
 					'attachments'    : attachments,
