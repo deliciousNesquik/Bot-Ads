@@ -13,21 +13,22 @@ import loguru
 import tools.config
 import tools.wall
 import tools.post_date
+import tools.log_tools
 import time
 import os
 
+#loguru.logger.disable("vkbottle")
 bot = Bot(token=tools.config.token_message)
 customers = Customer()
 payment = Payment(token=tools.config.token_payments)
 ctx = CtxStorage()
 
 class PostCreator(BaseStateGroup):
-    MESSAGE        = 1
-    ATTACHMENTS    = 2
-    PUBLISH_DATE   = 3
-    REFERENCE      = 4
-    CLOSE_COMMENTS = 5
-    CONFIRM        = 6
+    CONTENT        = 1
+    PUBLISH_DATE   = 2
+    REFERENCE      = 3
+    CLOSE_COMMENTS = 4
+    CONFIRM        = 5
 
 
 
@@ -35,6 +36,7 @@ class PostCreator(BaseStateGroup):
 async def start(message: Message):
 	users_info = await bot.api.users.get(message.from_id)
 	user_name = users_info[0].first_name + " " + users_info[0].last_name
+	tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Начал переписку>", time=datetime.datetime.now(), limit=10)
 	
 	keyboard = Keyboard(inline=True)
 	keyboard.add(Text("Оплатить пост"))
@@ -51,8 +53,12 @@ keyboard=keyboard
 
 @bot.on.private_message(text="Оплатить пост")
 async def pay(message: Message):
-	
+	users_info = await bot.api.users.get(message.from_id)
+	user_name = users_info[0].first_name + " " + users_info[0].last_name
+	tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Начал оплату>", time=datetime.datetime.now(), limit=10)
+
 	if len(customers.get(user_id=message.from_id)) > 0 and customers.get(user_id=message.from_id)[0] == "PAY":
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Оплатил пост>", time=datetime.datetime.now(), limit=10)
 		keyboard = Keyboard(inline=True)
 		keyboard.add(Text("Создать рекламный пост"))
 		
@@ -68,7 +74,6 @@ async def pay(message: Message):
 					sum_=tools.config.price_ads,
 					label=customers.get(message.from_id)[1],
 				)
-		await message.answer(f"Пользователь {message.from_id}, статус оплаты {customers.get(message.from_id)[0]}, метка оплаты {customers.get(message.from_id)[1]}")
 		await message.answer(f"Ссылка для оплаты: {ref}"); time.sleep(1)
 		await message.answer("После оплаты нажмите кнопку ниже", keyboard=keyboard)
 
@@ -82,13 +87,15 @@ async def pay(message: Message):
 
 @bot.on.private_message(text="Проверить оплату")
 async def pay(message: Message):
+	users_info = await bot.api.users.get(message.from_id)
+	user_name = users_info[0].first_name + " " + users_info[0].last_name
 	if payment.check_quickpay(label=customers.get(message.from_id)[1]):
 		customers.set(user_id=message.from_id, param=["PAY"])
 		
 	if customers.get(user_id=message.from_id)[0] == "PAY":
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Оплатил пост>", time=datetime.datetime.now(), limit=10)
 		keyboard = Keyboard(inline=True)
 		keyboard.add(Text("Создать рекламный пост"))
-		await message.answer(f"Пользователь {message.from_id}, статус оплаты {customers.get(message.from_id)[0]}, метка оплаты {customers.get(message.from_id)[1]}")
 		await message.answer("Ваш пост оплачен, давайте приступим к его созданию", keyboard=keyboard)
 	
 	else:
@@ -98,20 +105,20 @@ async def pay(message: Message):
 
 @bot.on.private_message(lev="Создать рекламный пост")
 async def create_post(message: Message):
+	users_info = await bot.api.users.get(message.from_id)
+	user_name = users_info[0].first_name + " " + users_info[0].last_name
 	if len(customers.get(user_id=message.from_id)) > 0 and customers.get(user_id=message.from_id)[0] == "PAY":
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Начал создание поста>", time=datetime.datetime.now(), limit=10)
 		await message.answer("""
 Создание рекламного поста делится на некоторые этапы, в некоторых из них вы можете выбрать отсутствие элемента, для этого просто нажмите кнопку (Отсутствует)
 
-1)Сообщение поста
-2)Прикрепления поста
+1)Контент поста (фотографий 3 шт. макс.)
 3)Дата публикации поста
 4)Ссылка на источник
 5)Закрытые коментарии поста""")
 
-		keyboard = Keyboard(inline=True)
-		keyboard.add(Text("Отсутствует"))
-		await bot.state_dispenser.set(message.peer_id, PostCreator.MESSAGE)
-		return await message.answer("Введите сообщение поста:", keyboard=keyboard)
+		await bot.state_dispenser.set(message.peer_id, PostCreator.CONTENT)
+		return await message.answer("Введите контент поста:")
 		
 	else:
 		keyboard = Keyboard(inline=True)
@@ -121,76 +128,67 @@ async def create_post(message: Message):
 
 
 
-@bot.on.private_message(state=PostCreator.MESSAGE)
+@bot.on.private_message(state=PostCreator.CONTENT)
 async def create_post(message: Message):
-	customers.add(message.from_id, message.text)
-	ctx.set("message", message.text)
+	users_info = await bot.api.users.get(message.from_id)
+	user_name = users_info[0].first_name + " " + users_info[0].last_name
 
-	keyboard = Keyboard(inline=True)
-	keyboard.add(Text("Отсутствует"))
-	await bot.state_dispenser.set(message.peer_id, PostCreator.ATTACHMENTS)
-	return await message.answer("Прикрепите фотографии или видео", keyboard=keyboard)
-
-
-
-@bot.on.private_message(state=PostCreator.ATTACHMENTS)
-async def create_post(message: Message):
-	if message.text != "Отсутствует":
-		attach = []
-
-		if message.attachments:
-			if message.attachments[0].photo:
-				for i in range(len(message.attachments)):
-					attach.append(f"photo{i}.png")
-					urllib.request.urlretrieve(message.attachments[i].photo.sizes[-5].url, f"photo{i}.png")
-
-				ctx.set("attachments", attach)
-				customers.add(message.from_id, attach)
-				await bot.state_dispenser.set(message.peer_id, PostCreator.PUBLISH_DATE)
-				return await message.answer("Напишите время поста в формате гггг-мм-дд чч:мм")
-			
-			elif message.attachments[0].video:
-				for i in range(len(message.attachments)):
-					attach.append(f"video{i}.mp4")
-					urllib.request.urlretrieve(message.attachments[i].video.url, f"video{i}.mp4")
-
-				ctx.set("attachments", attach)
-				customers.add(message.from_id, attach)
-				await bot.state_dispenser.set(message.peer_id, PostCreator.PUBLISH_DATE)
-				return await message.answer("Напишите время поста в формате гггг-мм-дд чч:мм")
+	if message.text:
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Ввел сообщение>", time=datetime.datetime.now(), limit=10)
+		customers.add(message.from_id, message.text)
+		ctx.set("content", message.text)
 	else:
-		ctx.set("attachments", "Отсутствует")
-		customers.add(message.from_id, "Отсутствует")
-		if ctx.get("message") == "Отсутствует" and ctx.get("attachments") == "Отсутствует":
-			await message.answer("Вы допустили ошибку! Сообщение поста или фотографии должны быть заполнены!")
-			time.sleep(2)
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Не ввел сообщение>", time=datetime.datetime.now(), limit=10)
+		customers.add(message.from_id, None)
+		ctx.set("content", None)
 
-			keyboard = Keyboard(inline=True)
-			keyboard.add(Text("Отсутствует"))
+	if message.attachments:
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Прикрепил фото или видео>", time=datetime.datetime.now(), limit=10)
+		attach = []
+		if message.attachments[0].photo:
+			for i in range(len(message.attachments)):
+				print(message.attachments[i].photo.sizes[-5].url)
+				urllib.request.urlretrieve(message.attachments[i].photo.sizes[-5].url, f"photo{i}.png")
+				attach.append(f"photo{i}.png")
 
-			await bot.state_dispenser.set(message.peer_id, PostCreator.MESSAGE)
-			return await message.answer("Введите сообщение поста:", keyboard=keyboard)
-		else:
-			await bot.state_dispenser.set(message.peer_id, PostCreator.PUBLISH_DATE)
-			return await message.answer("Напишите время поста в формате гггг-мм-дд чч:мм")
+			ctx.set("content", attach)
+			customers.add(message.from_id, attach)
+			
+			# elif message.attachments[0].video:
+			# 	for i in range(len(message.attachments)):
+			# 		attach.append(f"video{i}.mp4")
+			# 		urllib.request.urlretrieve(message.attachments[i].video.url, f"video{i}.mp4")
+	else:
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Не прикрепил фото или видео>", time=datetime.datetime.now(), limit=10)
+		ctx.set("content", None)
+		customers.add(message.from_id, None)
+		
+	await bot.state_dispenser.set(message.peer_id, PostCreator.PUBLISH_DATE)
+	return await message.answer("Напишите время поста в формате гггг-мм-дд чч:мм")
 
 
 
 @bot.on.private_message(state=PostCreator.PUBLISH_DATE)
 async def create_post(message: Message):
-	
+	users_info = await bot.api.users.get(message.from_id)
+	user_name = users_info[0].first_name + " " + users_info[0].last_name
+
 	if tools.post_date.valid_date(publish_date=message.text) == -1:
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][error]Пользователь {user_name} действие <Не верно ввел дату>", time=datetime.datetime.now(), limit=10)
 		await bot.state_dispenser.set(message.peer_id, PostCreator.PUBLISH_DATE)
 		return await message.answer("ошибка ввода даты, пожалуйста введите дату заного в формате гггг-мм-дд чч:мм")
 		
 
 	elif tools.post_date.valid_date(publish_date=message.text) == 0:
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][error]Пользователь {user_name} действие <Ввел дату меньше текущей>", time=datetime.datetime.now(), limit=10)
 		await bot.state_dispenser.set(message.peer_id, PostCreator.PUBLISH_DATE)
 		return await message.answer("Введенная дата не может быть меньше текущей, пожалуйста введите дату заного в формате гггг-мм-дд чч:мм")
 
 
 	elif tools.post_date.valid_date(publish_date=message.text) == 1:
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Верно ввел дату>", time=datetime.datetime.now(), limit=10)
 		if tools.post_date.date_is_free(date_to_check=message.text+":00") == 1:
+			tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Ввел свободную дату>", time=datetime.datetime.now(), limit=10)
 			ctx.set("publish_date", message.text+":00")
 			customers.add(message.from_id, message.text+":00")
 
@@ -199,9 +197,11 @@ async def create_post(message: Message):
 			await bot.state_dispenser.set(message.peer_id, PostCreator.REFERENCE)
 			return await message.answer("Пожалуйста укажите источник вашего поста", keyboard=keyboard)
 		elif tools.post_date.date_is_free(date_to_check=message.text+":00") == 0:
+			tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][error]Пользователь {user_name} действие <Ввел занятую дату>", time=datetime.datetime.now(), limit=10)
 			await bot.state_dispenser.set(message.peer_id, PostCreator.PUBLISH_DATE)
 			return await message.answer("Введенная дата занята, пожалуйста введите другую дату с интервалом в 3 часа или больше")
 		elif tools.post_date.date_is_free(date_to_check=message.text+":00") == -1:
+			tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][error]Пользователь {user_name} действие <Ввел занятый день>", time=datetime.datetime.now(), limit=10)
 			await bot.state_dispenser.set(message.peer_id, PostCreator.PUBLISH_DATE)
 			return await message.answer("На данный день закончились записи, попробуйте ввести другой день")
 
@@ -209,23 +209,43 @@ async def create_post(message: Message):
 
 @bot.on.private_message(state=PostCreator.REFERENCE)
 async def create_post(message: Message):
-	ctx.set("reference", message.text)
-	customers.add(message.from_id, message.text)
+	users_info = await bot.api.users.get(message.from_id)
+	user_name = users_info[0].first_name + " " + users_info[0].last_name
 
-	keyboard = Keyboard(inline=True)
-	keyboard.add(Text("Да"))
-	keyboard.row()
-	keyboard.add(Text("Нет"))
-	await bot.state_dispenser.set(message.peer_id, PostCreator.CLOSE_COMMENTS)
-	return await message.answer("Хотите ли вы закрыть комментарии в вашем посте?", keyboard=keyboard)
+	if message.text == "Отсутствует":
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Не ввел ссылку на источник>", time=datetime.datetime.now(), limit=10)
+		ctx.set("reference", None)
+		customers.add(message.from_id, None)
+
+		keyboard = Keyboard(inline=True)
+		keyboard.add(Text("Да"))
+		keyboard.row()
+		keyboard.add(Text("Нет"))
+		await bot.state_dispenser.set(message.peer_id, PostCreator.CLOSE_COMMENTS)
+		return await message.answer("Хотите ли вы закрыть комментарии в вашем посте?", keyboard=keyboard)
+	else:
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Ввел ссылку на источник>", time=datetime.datetime.now(), limit=10)
+		ctx.set("reference", message.text)
+		customers.add(message.from_id, message.text)
+
+		keyboard = Keyboard(inline=True)
+		keyboard.add(Text("Да"))
+		keyboard.row()
+		keyboard.add(Text("Нет"))
+		await bot.state_dispenser.set(message.peer_id, PostCreator.CLOSE_COMMENTS)
+		return await message.answer("Хотите ли вы закрыть комментарии в вашем посте?", keyboard=keyboard)
 
 
 
 @bot.on.private_message(state=PostCreator.CLOSE_COMMENTS)
 async def create_post(message: Message):
+	users_info = await bot.api.users.get(message.from_id)
+	user_name = users_info[0].first_name + " " + users_info[0].last_name
+
 	if message.text == "Да":
-		ctx.set("close_comments", 1)
-		customers.add(message.from_id, 1)
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Закрыл коментарии>", time=datetime.datetime.now(), limit=10)
+		ctx.set("close_comments", True)
+		customers.add(message.from_id, True)
 		keyboard = Keyboard(inline=True)
 		keyboard.add(Text("Да"))
 		keyboard.row()
@@ -236,8 +256,9 @@ async def create_post(message: Message):
 
 	
 	elif message.text == "Нет":
-		ctx.set("close_comments", 0)
-		customers.add(message.from_id, 0)
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Не закрыл коментарии>", time=datetime.datetime.now(), limit=10)
+		ctx.set("close_comments", False)
+		customers.add(message.from_id, False)
 		keyboard = Keyboard(inline=True)
 		keyboard.add(Text("Да"))
 		keyboard.row()
@@ -247,6 +268,7 @@ async def create_post(message: Message):
 		return await message.answer("Убедитесь что все данные введены правильно, иначе отменить действие не получится. Если готовы продолжить нажмите Да, иначе Нет", keyboard=keyboard)
 
 	else:
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][error]Пользователь {user_name} действие <Не верно выбрал ответ>", time=datetime.datetime.now(), limit=10)
 		await message.answer("Не корректный ввод!")
 		await bot.state_dispenser.set(message.peer_id, PostCreator.CLOSE_COMMENTS)
 		return await message.answer("Хотите ли вы закрыть комментарии в вашем посте?", keyboard=keyboard)
@@ -254,80 +276,35 @@ async def create_post(message: Message):
 
 @bot.on.private_message(state=PostCreator.CONFIRM)
 async def create_post(message: Message):
+	users_info = await bot.api.users.get(message.from_id)
+	user_name = users_info[0].first_name + " " + users_info[0].last_name
+
 	if message.text == "Да":
-
-		if customers.get(message.from_id)[1] == "Отсутствует" and customers.get(message.from_id)[2] == "Отсутствует":
-			await message.answer("Вы допустили ошибку! Сообщение поста или фотографии должны быть заполнены!")
-			time.sleep(2)
-
-
-			keyboard = Keyboard(inline=True)
-			keyboard.add(Text("Отсутствует"))
-
-			await bot.state_dispenser.set(message.peer_id, PostCreator.MESSAGE)
-			return await message.answer("Введите сообщение поста:", keyboard=keyboard)
-		
-		else:
-			if customers.get(message.from_id)[2] == "Отсутствует":
-				if customers.get(message.from_id)[5] == "Отсутствует":
-					tools.wall.post(
-						attachments    =customers.get(message.from_id)[3],
-						publish_date   =datetime.datetime.strptime(customers.get(message.from_id)[4], "%Y-%m-%d %H:%M:%S"),
-						close_comments =customers.get(message.from_id)[6],
-					)
-				else:
-					tools.wall.post(
-						attachments    = customers.get(message.from_id)[3],
-						publish_date   = datetime.datetime.strptime(customers.get(message.from_id)[4], "%Y-%m-%d %H:%M:%S"),
-						close_comments = customers.get(message.from_id)[6],
-						copyright      = customers.get(message.from_id)[5],
-					)
-
-			if customers.get(message.from_id)[3] == "Отсутствует":
-				if customers.get(message.from_id)[5] == "Отсутствует":
-					tools.wall.post(
-						message        = customers.get(message.from_id)[2],
-						publish_date   = datetime.datetime.strptime(customers.get(message.from_id)[4], "%Y-%m-%d %H:%M:%S"),
-						close_comments = customers.get(message.from_id)[6],
-					)
-				else:
-					tools.wall.post(
-						message        = customers.get(message.from_id)[2],
-						publish_date   = datetime.datetime.strptime(customers.get(message.from_id)[4], "%Y-%m-%d %H:%M:%S"),
-						close_comments = customers.get(message.from_id)[6],
-						copyright      = customers.get(message.from_id)[5],
-					)
-			else:
-				if customers.get(message.from_id)[4] == "Отсутствует":
-					tools.wall.post(
-						message        = customers.get(message.from_id)[2],
-						attachments    = customers.get(message.from_id)[3],
-						publish_date   = datetime.datetime.strptime(customers.get(message.from_id)[4], "%Y-%m-%d %H:%M:%S"),
-						close_comments = customers.get(message.from_id)[6],
-					)
-				else:
-					tools.wall.post(
-						message        = customers.get(message.from_id)[2],
-						attachments    = customers.get(message.from_id)[3],
-						publish_date   = datetime.datetime.strptime(customers.get(message.from_id)[4], "%Y-%m-%d %H:%M:%S"),
-						close_comments = customers.get(message.from_id)[6],
-						copyright      = customers.get(message.from_id)[5],
-					)
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Закончил создание поста>", time=datetime.datetime.now(), limit=10)
+		tools.wall.post(
+			message        = customers.get(message.from_id)[2],
+			attachments    = customers.get(message.from_id)[3],
+			publish_date   = datetime.datetime.strptime(customers.get(message.from_id)[4], "%Y-%m-%d %H:%M:%S"),
+			close_comments = customers.get(message.from_id)[6],
+			copyright      = customers.get(message.from_id)[5],
+			)
 
 		await message.answer("Ваш пост занесен в список и вовремя будет опубликован!")
 
-		if customers.get(message.from_id)[3] != "Отсутствует":
+		if customers.get(message.from_id)[3] != None:
 			for item in customers.get(message.from_id)[3]:
 				os.remove(item)
 
 		customers.set(user_id=message.from_id, param=["WAIT"])
 	
 	elif message.text == "Нет":
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Отменил создание поста>", time=datetime.datetime.now(), limit=10)
 		keyboard = Keyboard(inline=True)
 		keyboard.add(Text("Создать рекламный пост"))
 		await message.answer("Давайте приступим к созданию поста для этого нажмите кнопку ниже", keyboard=keyboard)
 
 	else:
+		tools.log_tools.logging(log_file=tools.config.path_log, string = f"[bot][info]Пользователь {user_name} действие <Не верно выбрал ответ>", time=datetime.datetime.now(), limit=10)
 		keyboard = Keyboard(inline=True)
 		keyboard.add(Text("Создать рекламный пост"))
 		await message.answer("Я тебя не понял", keyboard=keyboard)
