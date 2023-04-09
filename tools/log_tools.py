@@ -22,7 +22,7 @@ def logging(log_file: str, string: str, time: str, limit: int) -> bool:
 def check_limit(log_file: str, limit: int):
 
 	if ((os.path.getsize(log_file)) / 1000) > limit:
-		FILE_LIMIT = f"{datetime.datetime.now().year}-{datetime.datetime.now().month}-{datetime.datetime.now().day}_old_log.txt"
+		FILE_LIMIT = f"data/log/{datetime.datetime.now().year}-{datetime.datetime.now().month}-{datetime.datetime.now().day}_old_log.txt"
 
 		with open(FILE_LIMIT, mode='w', encoding="utf-8") as file:
 			pass

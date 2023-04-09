@@ -28,25 +28,28 @@ import datetime
 
 
 def post(publish_date:datetime, message:str = None, attachments:list = None, close_comments:int = 0, copyright:str = None, from_group:int = 0) -> bool:
-	log_tools.logging(log_file=config.path_log, string = f"[wall.post]Создание поста в вк", time=datetime.datetime.now(), limit=10)
+	log_tools.logging(log_file=config.path_log, string = f"[wall.post][info]Создание поста в вк...", time=datetime.datetime.now(), limit=10)
 
 	global session, uploader
 
 	if message == None and attachments == None:
-		log_tools.logging(log_file=config.path_log, string = f"[wall.post]при создании поста не указаны аргументы сообщения и прикреплений", time=datetime.datetime.now(), limit=10)
+		log_tools.logging(log_file=config.path_log, string = f"[wall.post][error]При создании поста не указаны аргументы сообщения и прикреплений!", time=datetime.datetime.now(), limit=10)
 		return "При публикации поста нужно чтобы хотя бы один параметр был не пустым"
 
 	if attachments is not None:
 		if attachments[0].split(".")[-1] in config.photo_expansion:
-			log_tools.logging(log_file=config.path_log, string = f"[wall.post]обнаруженны прикрепления в виде фото", time=datetime.datetime.now(), limit=10)
-			attachments = upload._upload_photo(uploader=uploader, images=attachments)
+			log_tools.logging(log_file=config.path_log, string = f"[wall.post][info]Обнаружены фото, загрузка...", time=datetime.datetime.now(), limit=10)
+			attachments = uploader.upload_photo(images=attachments)
+			log_tools.logging(log_file=config.path_log, string = f"[wall.post][info]Успешная загрузка фото", time=datetime.datetime.now(), limit=10)
+
 		elif attachments[0].split(".")[-1] in config.video_expansion:
-			log_tools.logging(log_file=config.path_log, string = f"[wall.post]обнаруженны прикрепления в виде видео", time=datetime.datetime.now(), limit=10)
-			attachments = upload._upload_video(uploader=uploader, videos=attachments)
+			log_tools.logging(log_file=config.path_log, string = f"[wall.post][info]Обнаружены видео, загрузка...", time=datetime.datetime.now(), limit=10)
+			attachments = uploader.upload_video(videos=attachments)
+			log_tools.logging(log_file=config.path_log, string = f"[wall.post][info]Успешная загрузка видео", time=datetime.datetime.now(), limit=10)
 
 	date_time = datetime.datetime(year=datetime.datetime.now().year, month=datetime.datetime.now().month, day=datetime.datetime.now().day, hour=datetime.datetime.now().hour, minute=datetime.datetime.now().minute)
 	if date_time > publish_date:
-		log_tools.logging(log_file=config.path_log, string = f"[wall.post]дата поста не удовлетворяет условию", time=datetime.datetime.now(), limit=10)
+		log_tools.logging(log_file=config.path_log, string = f"[wall.post][error]Дата поста меньше чем текущая", time=datetime.datetime.now(), limit=10)
 		return "Время публикации поста должна быть больше чем время в данный момент"
 
 	try:
@@ -59,7 +62,7 @@ def post(publish_date:datetime, message:str = None, attachments:list = None, clo
 			close_comments = close_comments,
 			copyright      = copyright,
 			)
-		log_tools.logging(log_file=config.path_log, string = f"[wall.post]пост создался в вк\n\n", time=datetime.datetime.now(), limit=10)
+		log_tools.logging(log_file=config.path_log, string = f"[wall.post][info]Успешное создание поста\n\n", time=datetime.datetime.now(), limit=10)
 		
 		json_tools.append_json(
 		filename = config.path_json, 
@@ -78,20 +81,20 @@ def post(publish_date:datetime, message:str = None, attachments:list = None, clo
 		)
 		return True
 	except Exception as ex:
-		log_tools.logging(log_file=config.path_log, string = f"[wall.post]при создании возникла ошибка {ex}\n\n", time=datetime.datetime.now(), limit=10)
+		log_tools.logging(log_file=config.path_log, string = f"[wall.post][error]Ошибка создания поста {ex}\n\n", time=datetime.datetime.now(), limit=10)
 		return False
 
 def delete(post_id:int) -> bool:
 	global session
-	log_tools.logging(log_file=config.path_log, string = f"[wall.delete]Удаление поста в вк", time=datetime.datetime.now(), limit=10)
+	log_tools.logging(log_file=config.path_log, string = f"[wall.delete][info]Удаление поста в вк...", time=datetime.datetime.now(), limit=10)
 	try:
 		delete = session.wall.delete(
 			owner_id = -config.owner_id,
 			post_id  = post_id,
 			)
-		log_tools.logging(log_file=config.path_log, string = f"[wall.delete]Удаление поста в вк прошло успешно", time=datetime.datetime.now(), limit=10)
+		log_tools.logging(log_file=config.path_log, string = f"[wall.delete][info]Удаление поста в вк прошло успешно", time=datetime.datetime.now(), limit=10)
 	except Exception as ex:
-		log_tools.logging(log_file=config.path_log, string = f"[wall.delete]Произошла ошибка при удалении {ex}", time=datetime.datetime.now(), limit=10)
+		log_tools.logging(log_file=config.path_log, string = f"[wall.delete][error]Ошибка удаления поста {ex}", time=datetime.datetime.now(), limit=10)
 
 def _get_overdue_post(publish_date: datetime) -> int:
 	publish_date = _unix_time(publish_date)
@@ -115,6 +118,6 @@ def _unix_time(date_time: datetime) -> int:
 	return int(date_time.timestamp())
 
 global session, uploader, tools
-session  = login._authorization(config.token_wall)
-uploader = upload._get_uploader(session)
-tools    = tool._get_tools(session)
+session  = login.Authorization(config.token_wall).get_api()
+uploader = upload.Uploaders(session)
+tools    = tool.Tools(session).get_tools()

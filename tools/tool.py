@@ -1,4 +1,8 @@
 from vk_api import VkTools
 
-def _get_tools(session) -> VkTools:
-	return VkTools(session)
+class Tools():
+	def __init__(self, session):
+		self.tools = VkTools(session)
+
+	def get_tools(self):
+		return self.tools

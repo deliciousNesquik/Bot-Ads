@@ -45,7 +45,7 @@ def find_overdue_post_json(filename: str, indent: int) -> list:
 
 		#запоминаем id поста
 		id_post = key
-		log_tools.logging(log_file=config.path_log, string = f"[json_tools]Обработка поста №{id_post}", time=datetime.now(), limit=10)
+		log_tools.logging(log_file=config.path_log, string = f"[json_tools][info]Обработка поста №{id_post}", time=datetime.now(), limit=10)
 
 		#прохожимся по элементам поста и ищем параметр со врменем поста
 		for key, value in value.items():
@@ -55,22 +55,19 @@ def find_overdue_post_json(filename: str, indent: int) -> list:
 
 				#дата которая на посте
 				date_post = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
-				log_tools.logging(log_file=config.path_log, string = f"[json_tools]дата этого поста:{date_post}", time=datetime.now(), limit=10)
+				log_tools.logging(log_file=config.path_log, string = f"[json_tools][info]Дата поста №{id_post}: {date_post}", time=datetime.now(), limit=10)
 				#актуальная дата
 				date_now = datetime.strptime(f"{datetime.now().year}-{datetime.now().month}-{datetime.now().day} {datetime.now().hour}:{datetime.now().minute}:{datetime.now().second}", "%Y-%m-%d %H:%M:%S")
 
-				log_tools.logging(log_file=config.path_log, string = f"[json_tools]сегодняшняя дата:{date_now}", time=datetime.now(), limit=10)
 				#если со времени публикации поста прошло три дня
 				if date_now > date_post:
-					log_tools.logging(log_file=config.path_log, string = f"[json_tools]дата данного поста больше чем сегодняшняя дата", time=datetime.now(), limit=10)
-					log_tools.logging(log_file=config.path_log, string = f"[json_tools]разница во времени: {abs(date_post - date_now).total_seconds()}\n\n", time=datetime.now(), limit=10)
-					#if abs(date_post - date_now).total_seconds() >= 3 * 24 * 60 * 60:
-					if abs(date_post - date_now).total_seconds() >= 60:
+					if abs(date_post - date_now).total_seconds() >= 3 * 24 * 60 * 60:
+					#if abs(date_post - date_now).total_seconds() >= 60:
 						#заносим в список id поста для того чтобы потом его удалить
 						date_post_to_delete.append(date_post)
 						id_post_to_delete.append(id_post)
 				else:
-					log_tools.logging(log_file=config.path_log, string = f"[json_tools]данный пост пока что не является просроченным\n\n", time=datetime.now(), limit=10)
+					log_tools.logging(log_file=config.path_log, string = f"[json_tools]Пост №{id_post} не является просроченным\n\n", time=datetime.now(), limit=10)
 
 
 	for ids in id_post_to_delete:

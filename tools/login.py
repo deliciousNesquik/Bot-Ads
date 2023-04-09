@@ -1,15 +1,15 @@
 from vk_api import VkApi
 
-def _auth_handler() -> int and bool:
-	key = input("Введите ключ двуфакторной аутефикации: ")
-	remember_device = True
+class Authorization():
+	# def _auth_handler() -> int and bool:
+	# 	key = input("Введите ключ двуфакторной аутефикации: ")
+	# 	remember_device = True
 
-	return key, remember_device
+	# 	return key, remember_device
 
-def _authorization(token: str) -> VkApi:
-	try:
-		session = VkApi(token=token)
-		return session.get_api()
+	def __init__(self, token=None, login=None, password=None):
+		self.session = VkApi(token=token)
 
-	except Exception as ex:
-		return ex
+
+	def get_api(self):
+		return self.session.get_api()
