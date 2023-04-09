@@ -2,3 +2,4 @@ requests
 vk_api
 vkbottle
 yoomoney
+sqlite3
