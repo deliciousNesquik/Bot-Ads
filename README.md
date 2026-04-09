@@ -1,18 +1,117 @@
-# BotAds <img src="https://github.com/user-attachments/assets/9ade5d54-c48c-41f6-93a1-bd3b646f7dfe" height="30"/> <br>VKBot <img src="https://github.com/user-attachments/assets/7158974e-bfe5-4142-8ad9-21e6ecf7827d" height="30"/>
-#### BotAds is an automated bot designed for the social network VKontakte, developed using Python. Its primary goal is to streamline and automate the process of posting advertisements in VKontakte communities.
+# BotAds <img src="https://github.com/user-attachments/assets/9ade5d54-c48c-41f6-93a1-bd3b646f7dfe" height="30"/>
 
-## Features
-### BotAds offers the following functionalities:
-1. Automatic Response to Messages: Upon receiving a message from a customer in VKontakte, the bot automatically responds.
-2. Payment and Creation of Ad Posts: Customers can pay for advertising, create ad posts, and specify the desired publication date.
-3. Automatic Posting of Ads: The bot schedules and publishes ad posts at the specified time and records them in a database.
-4. Removal of Ads Upon Expiry: After the ad post's storage period expires, it is removed from both the database and the VKontakte community.
+**Автоматизированный бот для размещения рекламы в сообществах ВКонтакте, разработанный на Python.**
 
-## Technologies Used
-### The development of BotAds involved the use of several libraries and APIs:
-* vkbottle: For interacting with VKontakte messages. <img src="https://github.com/user-attachments/assets/7117ada0-a0e2-4277-9bde-2a920b88868f" height="25"/>
-* vk_api: For posting and deleting posts within VKontakte. <img src="https://github.com/user-attachments/assets/1fe51a19-4acb-49c1-ba86-9b5d635366d5" height="25"/>
-* yoomoney: For processing payments for ad posts. <img src="https://github.com/user-attachments/assets/09054f9b-f24a-4f32-9856-c56a57676894" height="25"/>
-* json: For storing information about posts in JSON format. <img src="https://github.com/user-attachments/assets/4d7b3f49-b744-41d8-b457-f0f0440ae011" height="25"/>
-* sqlite3: For storing partial user data in a local SQLite database. <img src="https://github.com/user-attachments/assets/31890aed-d67e-4f2e-8e73-2d7c30b1a141" height="25"/>
+<img src="https://github.com/user-attachments/assets/7158974e-bfe5-4142-8ad9-21e6ecf7827d" height="30"/>
 
+---
+
+## Описание
+
+BotAds автоматизирует полный цикл работы с рекламными публикациями в сообществах ВКонтакте — от приёма заявок и обработки оплаты до публикации постов по расписанию и удаления истёкших размещений.
+
+---
+
+## Возможности
+
+| Функция | Описание |
+|---|---|
+| **Автоответ на сообщения** | Мгновенно реагирует на входящие сообщения клиентов в ВКонтакте |
+| **Обработка оплаты** | Принимает платежи за рекламные размещения через YooMoney |
+| **Создание рекламных постов** | Позволяет клиентам сформировать пост и выбрать дату публикации |
+| **Публикация по расписанию** | Автоматически размещает рекламу в указанное время и фиксирует данные в базе |
+| **Автоудаление** | Удаляет просроченные посты со стены сообщества и из базы данных |
+
+---
+
+## Технологический стек
+
+| Технология | Назначение |
+|---|---|
+| <img src="https://github.com/user-attachments/assets/7117ada0-a0e2-4277-9bde-2a920b88868f" height="20"/> **vkbottle** | Обработка сообщений и взаимодействие с ботом |
+| <img src="https://github.com/user-attachments/assets/1fe51a19-4acb-49c1-ba86-9b5d635366d5" height="20"/> **vk_api** | Публикация и удаление записей на стене |
+| <img src="https://github.com/user-attachments/assets/09054f9b-f24a-4f32-9856-c56a57676894" height="20"/> **yoomoney** | Обработка платежей |
+| <img src="https://github.com/user-attachments/assets/4d7b3f49-b744-41d8-b457-f0f0440ae011" height="20"/> **json** | Хранение данных о рекламных постах |
+| <img src="https://github.com/user-attachments/assets/31890aed-d67e-4f2e-8e73-2d7c30b1a141" height="20"/> **sqlite3** | Локальная база данных клиентов |
+
+---
+
+## Структура проекта
+
+```text
+vk-bot-ads/
+├── bot.py                  # Точка входа — запуск бота
+├── README.md
+│
+├── data/                   # Хранение данных
+│   ├── customers.db        # БД клиентов сообщества
+│   ├── posts.json          # Данные о рекламных постах
+│   └── log/
+│       └── log.txt         # Журнал событий
+│
+├── scripts/                # Вспомогательные скрипты
+│   ├── date.sh             # Установка часового пояса на сервере
+│   └── requestments.txt    # Зависимости проекта
+│
+└── tools/                  # Модули бота
+    ├── config.py           # Конфигурация проекта
+    ├── customers.py        # Логика работы с клиентами
+    ├── json_tools.py       # Операции с JSON-данными постов
+    ├── log_tools.py        # Логирование событий
+    ├── login.py            # Авторизация ВКонтакте
+    ├── payments.py         # Обработка платежей
+    ├── post_date.py        # Проверка постов и работа со временем
+    ├── sql.py              # Работа с SQLite
+    ├── tool.py             # Утилиты VK API
+    ├── upload.py           # Загрузка медиафайлов
+    └── wall.py             # Управление стеной сообщества
+```
+
+---
+
+## Конфигурация
+
+Все настройки проекта находятся в файле `tools/config.py`.
+
+### Данные сообщества
+
+| Параметр | Описание |
+|---|---|
+| `owner_id` | ID сообщества ВКонтакте |
+| `group_name` | Название сообщества |
+| `price_ads` | Стоимость одного рекламного размещения (₽) |
+| `admins_id` | Список ID администраторов сообщества |
+
+### Токены и авторизация
+
+| Параметр | Описание |
+|---|---|
+| `token_wall` | Токен для работы со стеной сообщества |
+| `token_message` | Токен для работы с сообщениями |
+| `token_payments` | Токен для обработки платежей |
+
+### Настройки YooMoney
+
+| Параметр | Описание |
+|---|---|
+| `client_id` | ID приложения YooMoney |
+| `redirect_uri` | Ссылка переадресации после авторизации |
+| `scope` | Список прав доступа приложения |
+
+### Пути и допустимые форматы
+
+| Параметр | Описание |
+|---|---|
+| `path_json` | Путь к файлу с данными о постах |
+| `path_log` | Путь к файлу журнала событий |
+| `path_db` | Путь к файлу базы данных |
+| `photo_expansion` | Допустимые форматы изображений (`png`, `jpg`, `jpeg`, `gif`) |
+| `video_expansion` | Допустимые форматы видео (`mp4`, `avi`) |
+
+---
+
+## Лицензия
+
+Данный проект **не является свободно распространяемым**. Для использования, модификации или распространения кода **необходимо предварительно связаться с автором** и получить явное разрешение.
+
+> **© 2024. Все права защищены. Несанкционированное использование запрещено.**
